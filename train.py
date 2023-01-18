@@ -13,6 +13,7 @@ import time
 from datetime import datetime
 
 import numpy as np
+import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -26,21 +27,26 @@ from conf import settings
 from utils import get_network, get_training_dataloader, get_test_dataloader, WarmUpLR, \
     most_recent_folder, most_recent_weights, last_epoch, best_acc_weights
 
-def train(epoch):
+def train(inputs, targets):
+    if args.gpu:
+        targets = targets.cuda()
+        inputs = inputs.cuda()
+    optimizer.zero_grad()
+    outputs = net(inputs)
+    loss = loss_function(outputs, targets)
+    loss.backward()
+    optimizer.step()
+    return loss, outputs
+
+
+def wecloud_train(epoch):
 
     start = time.time()
     net.train()
+    epoch_start_time = time.time()
     for batch_index, (images, labels) in enumerate(cifar100_training_loader):
 
-        if args.gpu:
-            labels = labels.cuda()
-            images = images.cuda()
-
-        optimizer.zero_grad()
-        outputs = net(images)
-        loss = loss_function(outputs, labels)
-        loss.backward()
-        optimizer.step()
+        loss, outputs = train(images, labels)
 
         n_iter = (epoch - 1) * len(cifar100_training_loader) + batch_index + 1
 
@@ -58,6 +64,16 @@ def train(epoch):
             trained_samples=batch_index * args.b + len(images),
             total_samples=len(cifar100_training_loader.dataset)
         ))
+
+        all_log.append([
+            epoch,                                  # epoch
+            batch_index * args.b + len(images),     # trained_samples
+            len(cifar100_training_loader.dataset),  # total_samples
+            loss.item(),                            # loss
+            optimizer.param_groups[0]['lr'],        # lr
+            time.time() - epoch_start_time,         # current epoch wall-clock time
+        ])
+        return
 
         #update training loss for each iteration
         writer.add_scalar('Train/loss', loss.item(), n_iter)
@@ -146,6 +162,9 @@ if __name__ == '__main__':
         shuffle=True
     )
 
+    log_header = ["epoch", "trained_samples", "total_samples", "loss", "lr", "current epoch wall-clock time"]
+    all_log = []
+
     loss_function = nn.CrossEntropyLoss()
     optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
     train_scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=settings.MILESTONES, gamma=0.2) #learning rate decay
@@ -209,7 +228,8 @@ if __name__ == '__main__':
             if epoch <= resume_epoch:
                 continue
 
-        train(epoch)
+        wecloud_train(epoch)
+        break
         acc = eval_training(epoch)
 
         #start to save best performance model after learning rate decay to 0.01
@@ -226,3 +246,7 @@ if __name__ == '__main__':
             torch.save(net.state_dict(), weights_path)
 
     writer.close()
+    df = pd.DataFrame(all_log, columns=log_header)
+    os.makedirs(os.path.join("logs", args.net), exist_ok=True)
+    df.to_csv(os.path.join("logs", args.net, f"{settings.TIME_NOW}.csv"))
+
