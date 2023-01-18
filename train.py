@@ -64,15 +64,14 @@ def wecloud_train(epoch):
             trained_samples=batch_index * args.b + len(images),
             total_samples=len(cifar100_training_loader.dataset)
         ))
-
-        all_log.append([
+        csv_writer.write("{},{},{},{},{},{}".format(
             epoch,                                  # epoch
             batch_index * args.b + len(images),     # trained_samples
             len(cifar100_training_loader.dataset),  # total_samples
             loss.item(),                            # loss
             optimizer.param_groups[0]['lr'],        # lr
             time.time() - epoch_start_time,         # current epoch wall-clock time
-        ])
+        ))
         return
 
         #update training loss for each iteration
@@ -162,8 +161,12 @@ if __name__ == '__main__':
         shuffle=True
     )
 
-    log_header = ["epoch", "trained_samples", "total_samples", "loss", "lr", "current epoch wall-clock time"]
-    all_log = []
+    # log_header = ["epoch", "trained_samples", "total_samples", "loss", "lr", "current epoch wall-clock time"]
+    os.makedirs(os.path.join("logs", args.net), exist_ok=True)
+    csv_path = os.path.join("logs", args.net, f"{settings.TIME_NOW}.csv")
+    csv_writer = open(csv_path, "w")
+    csv_writer.write("epoch,trained_samples,total_samples,loss,lr,current epoch wall-clock time\n")
+
 
     loss_function = nn.CrossEntropyLoss()
     optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
@@ -246,7 +249,8 @@ if __name__ == '__main__':
             torch.save(net.state_dict(), weights_path)
 
     writer.close()
-    df = pd.DataFrame(all_log, columns=log_header)
-    os.makedirs(os.path.join("logs", args.net), exist_ok=True)
-    df.to_csv(os.path.join("logs", args.net, f"{settings.TIME_NOW}.csv"))
+    csv_writer.close()
+    # df = pd.DataFrame(all_log, columns=log_header)
+    # os.makedirs(os.path.join("logs", args.net), exist_ok=True)
+    # df.to_csv(os.path.join("logs", args.net, f"{settings.TIME_NOW}.csv"))
 
