@@ -45,6 +45,7 @@ def wecloud_train(epoch):
     net.train()
     epoch_start_time = time.time()
     for batch_index, (images, labels) in enumerate(cifar100_training_loader):
+        batch_start_time = time.time()
 
         loss, outputs = train(images, labels)
 
@@ -57,13 +58,13 @@ def wecloud_train(epoch):
             if 'bias' in name:
                 writer.add_scalar('LastLayerGradients/grad_norm2_bias', para.grad.norm(), n_iter)
 
-        print('Training Epoch: {epoch} [{trained_samples}/{total_samples}]\tLoss: {:0.4f}\tLR: {:0.6f}'.format(
-            loss.item(),
-            optimizer.param_groups[0]['lr'],
-            epoch=epoch,
-            trained_samples=batch_index * args.b + len(images),
-            total_samples=len(cifar100_training_loader.dataset)
-        ))
+        # print('Training Epoch: {epoch} [{trained_samples}/{total_samples}]\tLoss: {:0.4f}\tLR: {:0.6f}'.format(
+        #     loss.item(),
+        #     optimizer.param_groups[0]['lr'],
+        #     epoch=epoch,
+        #     trained_samples=batch_index * args.b + len(images),
+        #     total_samples=len(cifar100_training_loader.dataset)
+        # ))
         csv_writer.write("{},{},{},{},{},{}".format(
             epoch,                                  # epoch
             batch_index * args.b + len(images),     # trained_samples
@@ -72,7 +73,17 @@ def wecloud_train(epoch):
             optimizer.param_groups[0]['lr'],        # lr
             time.time() - epoch_start_time,         # current epoch wall-clock time
         ))
-        return
+        print("epoch = {}, trained_samples = {}, total_samples = {}, loss = {}, lr = {}, current_epoch_wall-clock_time = {}".format(
+            epoch,                                  # epoch
+            batch_index * args.b + len(images),     # trained_samples
+            len(cifar100_training_loader.dataset),  # total_samples
+            loss.item(),                            # loss
+            optimizer.param_groups[0]['lr'],        # lr
+            time.time() - epoch_start_time,         # current epoch wall-clock time
+        ))
+        if args.profiling:
+            print(f"PROFILING: training one batch costs {time.time() - batch_start_time} seconds")
+            return
 
         #update training loss for each iteration
         writer.add_scalar('Train/loss', loss.item(), n_iter)
@@ -134,12 +145,13 @@ def eval_training(epoch=0, tb=True):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-net', type=str, required=True, help='net type')
-    parser.add_argument('-gpu', action='store_true', default=False, help='use gpu or not')
+    parser.add_argument('--net', type=str, required=True, help='net type')
+    parser.add_argument('--gpu', action='store_true', default=False, help='use gpu or not')
     parser.add_argument('-b', type=int, default=128, help='batch size for dataloader')
-    parser.add_argument('-warm', type=int, default=1, help='warm up training phase')
-    parser.add_argument('-lr', type=float, default=0.1, help='initial learning rate')
-    parser.add_argument('-resume', action='store_true', default=False, help='resume training')
+    parser.add_argument('--warm', type=int, default=1, help='warm up training phase')
+    parser.add_argument('--lr', type=float, default=0.1, help='initial learning rate')
+    parser.add_argument('--resume', action='store_true', default=False, help='resume training')
+    parser.add_argument('--profiling', action="store_true", default=False, help="profile one batch")
     args = parser.parse_args()
 
     net = get_network(args)
@@ -232,7 +244,10 @@ if __name__ == '__main__':
                 continue
 
         wecloud_train(epoch)
-        break
+        
+        if args.profiling:
+            break
+
         acc = eval_training(epoch)
 
         #start to save best performance model after learning rate decay to 0.01
