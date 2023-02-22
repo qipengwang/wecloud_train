@@ -4,5 +4,6 @@ RUN mkdir /app
 ADD . /app/
 WORKDIR /app
 RUN pip install -r requirements.txt
+RUN wget https://www.cs.toronto.edu/\~kriz/cifar-100-python.tar.gz -O data/cifar-100-python.tar.gz
 
 EXPOSE 5000
