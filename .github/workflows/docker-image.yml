@@ -23,4 +23,4 @@ jobs:
     - name: Build the Docker image
       run: docker build . --file Dockerfile --tag yangchengxu/wecloud_train_test_job:latest
     - name: Push the Docker image
-      run: docker push yangchengxu/wecloud_train_test_job:latest
+      run: docker push registry.cn-beijing.aliyuncs.com/yangchengxu/wecloud_train_test_job:latest
