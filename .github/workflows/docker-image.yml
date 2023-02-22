@@ -16,11 +16,11 @@ jobs:
     - uses: actions/checkout@v3
     - name: docker login
       env:
-        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME_ALIYUN }}
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD_ALIYUN }}
       run: | 
-        docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+        docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD registry.cn-beijing.aliyuncs.com
     - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag wangtai/wecloud_train_test_job:latest
+      run: docker build . --file Dockerfile --tag yangchengxu/wecloud_train_test_job:latest
     - name: Push the Docker image
-      run: docker push wangtai/wecloud_train_test_job:latest
+      run: docker push yangchengxu/wecloud_train_test_job:latest
