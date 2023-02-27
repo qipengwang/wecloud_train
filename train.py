@@ -11,6 +11,10 @@ import sys
 import argparse
 import time
 from datetime import datetime
+import logging
+
+logging.basicConfig(format='%(asctime)s - %(pathname)s[line:%(lineno)d] - %(levelname)s: %(message)s',
+                    level=logging.INFO)
 
 import numpy as np
 import pandas as pd
@@ -26,6 +30,8 @@ from torch.utils.tensorboard import SummaryWriter
 from conf import settings
 from utils import get_network, get_training_dataloader, get_test_dataloader, WarmUpLR, \
     most_recent_folder, most_recent_weights, last_epoch, best_acc_weights
+
+logger = logging.Logger(__name__)
 
 def train(inputs, targets):
     if args.gpu:
@@ -58,7 +64,7 @@ def wecloud_train(epoch):
             if 'bias' in name:
                 writer.add_scalar('LastLayerGradients/grad_norm2_bias', para.grad.norm(), n_iter)
 
-        # print('Training Epoch: {epoch} [{trained_samples}/{total_samples}]\tLoss: {:0.4f}\tLR: {:0.6f}'.format(
+        # logging.info('Training Epoch: {epoch} [{trained_samples}/{total_samples}]\tLoss: {:0.4f}\tLR: {:0.6f}'.format(
         #     loss.item(),
         #     optimizer.param_groups[0]['lr'],
         #     epoch=epoch,
@@ -73,7 +79,7 @@ def wecloud_train(epoch):
             optimizer.param_groups[0]['lr'],        # lr
             time.time() - epoch_start_time,         # current epoch wall-clock time
         ))
-        print("epoch = {}, trained_samples = {}, total_samples = {}, loss = {}, lr = {}, current_epoch_wall-clock_time = {}".format(
+        logging.info("epoch = {}, trained_samples = {}, total_samples = {}, loss = {}, lr = {}, current_epoch_wall-clock_time = {}".format(
             epoch,                                  # epoch
             batch_index * args.b + len(images),     # trained_samples
             len(cifar100_training_loader.dataset),  # total_samples
@@ -82,7 +88,7 @@ def wecloud_train(epoch):
             time.time() - epoch_start_time,         # current epoch wall-clock time
         ))
         if args.profiling:
-            print(f"PROFILING: training one batch costs {time.time() - batch_start_time} seconds")
+            logging.info(f"PROFILING: training one batch costs {time.time() - batch_start_time} seconds")
             return
 
         #update training loss for each iteration
@@ -98,7 +104,7 @@ def wecloud_train(epoch):
 
     finish = time.time()
 
-    print('epoch {} training time consumed: {:.2f}s'.format(epoch, finish - start))
+    logging.info('epoch {} training time consumed: {:.2f}s'.format(epoch, finish - start))
 
 @torch.no_grad()
 def eval_training(epoch=0, tb=True):
@@ -124,16 +130,15 @@ def eval_training(epoch=0, tb=True):
 
     finish = time.time()
     if args.gpu:
-        print('GPU INFO.....')
-        print(torch.cuda.memory_summary(), end='')
-    print('Evaluating Network.....')
-    print('Test set: Epoch: {}, Average loss: {:.4f}, Accuracy: {:.4f}, Time consumed:{:.2f}s'.format(
+        logging.info('GPU INFO.....')
+        logging.info(torch.cuda.memory_summary(), end='')
+    logging.info('Evaluating Network.....')
+    logging.info('Test set: Epoch: {}, Average loss: {:.4f}, Accuracy: {:.4f}, Time consumed:{:.2f}s'.format(
         epoch,
         test_loss / len(cifar100_test_loader.dataset),
         correct.float() / len(cifar100_test_loader.dataset),
         finish - start
     ))
-    print()
 
     #add informations to tensorboard
     if tb:
@@ -220,17 +225,17 @@ if __name__ == '__main__':
         best_weights = best_acc_weights(os.path.join(settings.CHECKPOINT_PATH, args.net, recent_folder))
         if best_weights:
             weights_path = os.path.join(settings.CHECKPOINT_PATH, args.net, recent_folder, best_weights)
-            print('found best acc weights file:{}'.format(weights_path))
-            print('load best training file to test acc...')
+            logging.info('found best acc weights file:{}'.format(weights_path))
+            logging.info('load best training file to test acc...')
             net.load_state_dict(torch.load(weights_path))
             best_acc = eval_training(tb=False)
-            print('best acc is {:0.2f}'.format(best_acc))
+            logging.info('best acc is {:0.2f}'.format(best_acc))
 
         recent_weights_file = most_recent_weights(os.path.join(settings.CHECKPOINT_PATH, args.net, recent_folder))
         if not recent_weights_file:
             raise Exception('no recent weights file were found')
         weights_path = os.path.join(settings.CHECKPOINT_PATH, args.net, recent_folder, recent_weights_file)
-        print('loading weights file {} to resume training.....'.format(weights_path))
+        logging.info('loading weights file {} to resume training.....'.format(weights_path))
         net.load_state_dict(torch.load(weights_path))
 
         resume_epoch = last_epoch(os.path.join(settings.CHECKPOINT_PATH, args.net, recent_folder))
@@ -254,14 +259,14 @@ if __name__ == '__main__':
         #start to save best performance model after learning rate decay to 0.01
         if epoch > settings.MILESTONES[1] and best_acc < acc:
             weights_path = checkpoint_path.format(net=args.net, epoch=epoch, type='best')
-            print('saving weights file to {}'.format(weights_path))
+            logging.info('saving weights file to {}'.format(weights_path))
             torch.save(net.state_dict(), weights_path)
             best_acc = acc
             continue
 
         if not epoch % settings.SAVE_EPOCH:
             weights_path = checkpoint_path.format(net=args.net, epoch=epoch, type='regular')
-            print('saving weights file to {}'.format(weights_path))
+            logging.info('saving weights file to {}'.format(weights_path))
             torch.save(net.state_dict(), weights_path)
 
     writer.close()
