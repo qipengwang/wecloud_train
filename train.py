@@ -71,16 +71,18 @@ def wecloud_train(epoch):
         #     trained_samples=batch_index * args.b + len(images),
         #     total_samples=len(cifar100_training_loader.dataset)
         # ))
-        csv_writer.write("{},{},{},{},{},{}".format(
+        csv_writer.write("{},{},{},{},{},{},{}".format(
             epoch,                                  # epoch
+            n_iter,                                 # iteration
             batch_index * args.b + len(images),     # trained_samples
             len(cifar100_training_loader.dataset),  # total_samples
             loss.item(),                            # loss
             optimizer.param_groups[0]['lr'],        # lr
             time.time() - epoch_start_time,         # current epoch wall-clock time
         ))
-        logging.info("epoch = {}, trained_samples = {}, total_samples = {}, loss = {}, lr = {}, current_epoch_wall-clock_time = {}".format(
+        logging.info("epoch = {}, iteration = {}, trained_samples = {}, total_samples = {}, loss = {}, lr = {}, current_epoch_wall-clock_time = {}".format(
             epoch,                                  # epoch
+            n_iter,                                 # iteration
             batch_index * args.b + len(images),     # trained_samples
             len(cifar100_training_loader.dataset),  # total_samples
             loss.item(),                            # loss
@@ -183,7 +185,7 @@ if __name__ == '__main__':
     os.makedirs(os.path.join("logs", args.net), exist_ok=True)
     csv_path = os.path.join("logs", args.net, f"{settings.TIME_NOW}.csv")
     csv_writer = open(csv_path, "w")
-    csv_writer.write("epoch,trained_samples,total_samples,loss,lr,current epoch wall-clock time\n")
+    csv_writer.write("epoch,iteration,trained_samples,total_samples,loss,lr,current epoch wall-clock time\n")
 
 
     loss_function = nn.CrossEntropyLoss()
