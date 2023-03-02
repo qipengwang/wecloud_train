@@ -88,7 +88,7 @@ def wecloud_train(epoch):
             time.time() - epoch_start_time,         # current epoch wall-clock time
         ))
         if args.profiling:
-            logging.info(f"PROFILING: training one batch costs {time.time() - batch_start_time} seconds")
+            logging.info(f"PROFILING: dataset total number {len(cifar100_training_loader.dataset)}, training one batch costs {time.time() - batch_start_time} seconds")
             return
 
         #update training loss for each iteration
