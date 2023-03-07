@@ -133,7 +133,7 @@ def eval_training(epoch=0, tb=True):
     finish = time.time()
     if args.gpu:
         logging.info('GPU INFO.....')
-        logging.info(torch.cuda.memory_summary(), end='')
+        logging.info(torch.cuda.memory_summary())
     logging.info('Evaluating Network.....')
     logging.info('Test set: Epoch: {}, Average loss: {:.4f}, Accuracy: {:.4f}, Time consumed:{:.2f}s'.format(
         epoch,
