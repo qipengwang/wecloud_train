@@ -31,6 +31,8 @@ from conf import settings
 from utils import get_network, get_training_dataloader, get_test_dataloader, WarmUpLR, \
     most_recent_folder, most_recent_weights, last_epoch, best_acc_weights
 
+import wecloud_callback
+
 logger = logging.Logger(__name__)
 
 def train(inputs, targets):
@@ -51,6 +53,7 @@ def wecloud_train(epoch):
     net.train()
     epoch_start_time = time.time()
     for batch_index, (images, labels) in enumerate(cifar100_training_loader):
+        wecloud_callback.step_begin()
         batch_start_time = time.time()
 
         loss, outputs = train(images, labels)
@@ -98,6 +101,7 @@ def wecloud_train(epoch):
 
         if epoch <= args.warm:
             warmup_scheduler.step()
+        wecloud_callback.step_end()
 
     for name, param in net.named_parameters():
         layer, attr = os.path.splitext(name)
@@ -242,7 +246,9 @@ if __name__ == '__main__':
 
         resume_epoch = last_epoch(os.path.join(settings.CHECKPOINT_PATH, args.net, recent_folder))
 
-
+    wecloud_callback.init(
+        total_steps=args.epoch * iter_per_epoch
+    )
     for epoch in range(1, args.epoch + 1):
         if epoch > args.warm:
             train_scheduler.step(epoch)

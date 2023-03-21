@@ -1,6 +1,6 @@
 torch==1.9.0
 torchvision==0.10.0
 pandas
-tensorflow==2.11.0
 tensorboard==2.11.0
 numpy==1.20.3
+git+https://github.com/qipengwang/wecloud_callback.git
