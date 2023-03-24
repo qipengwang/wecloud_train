@@ -158,6 +158,8 @@ def get_network(args):
         sys.exit()
 
     if args.gpu: #use_gpu
+        if torch.cuda.device_count() > 1:
+            net = torch.nn.DataParallel(net)
         net = net.cuda()
 
     return net

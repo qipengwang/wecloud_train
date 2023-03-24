@@ -219,7 +219,7 @@ if __name__ == '__main__':
     input_tensor = torch.Tensor(1, 3, 32, 32)
     if args.gpu:
         input_tensor = input_tensor.cuda()
-    writer.add_graph(net, input_tensor)
+    writer.add_graph(net.module if torch.cuda.device_count() > 1 else net, input_tensor)
 
     #create checkpoint folder to save model
     if not os.path.exists(checkpoint_path):
