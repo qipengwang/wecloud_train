@@ -1,0 +1,21 @@
+#image: nvidia/cuda:12.1.0-runtime-ubuntu18.04
+#image: nvidia/cuda:12.1.0-devel-ubuntu18.04
+image: wangqipeng/wecloud_train:v0.2.0
+
+
+setup: |
+  uname -a
+  echo "hello world"
+  python3 --version
+  pip3 install -r requirements.txt
+
+run: |
+  python
+  -u
+  train.py
+  --net
+  googlenet
+  --gpu
+
+profile: |
+  python -u train.py --net googlenet --gpu --profiling
