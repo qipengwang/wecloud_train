@@ -18,6 +18,7 @@ logging.basicConfig(format='%(asctime)s - %(pathname)s[line:%(lineno)d] - %(leve
 
 import numpy as np
 import pandas as pd
+import subprocess
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -196,12 +197,38 @@ if __name__ == '__main__':
     iter_per_epoch = len(cifar100_training_loader)
     warmup_scheduler = WarmUpLR(optimizer, iter_per_epoch * args.warm)
 
+    #prepare folder
+    cmd = 'mkdir -p ' + os.path.join(settings.CHECKPOINT_PATH, args.net)
+    #python 2.7 & 3
+    ret = subprocess.check_output(cmd, shell=True)
+
+    best_acc = 0.0
+
     # if args.resume:
     recent_folder = most_recent_folder(os.path.join(settings.CHECKPOINT_PATH, args.net), fmt=settings.DATE_FORMAT)
     if not recent_folder:
-        raise Exception('no recent folder were found')
+        #raise Exception('no recent folder were found')
+        resume_epoch = 0
+        checkpoint_path = os.path.join(settings.CHECKPOINT_PATH, args.net, settings.TIME_NOW)
+    else:
+        resume_epoch = last_epoch(os.path.join(settings.CHECKPOINT_PATH, args.net, recent_folder))
+        best_weights = best_acc_weights(os.path.join(settings.CHECKPOINT_PATH, args.net, recent_folder))
+        if best_weights:
+            weights_path = os.path.join(settings.CHECKPOINT_PATH, args.net, recent_folder, best_weights)
+            logging.info('found best acc weights file:{}'.format(weights_path))
+            logging.info('load best training file to test acc...')
+            net.load_state_dict(torch.load(weights_path))
+            best_acc = eval_training(tb=False)
+            logging.info('best acc is {:0.2f}'.format(best_acc))
 
-    checkpoint_path = os.path.join(settings.CHECKPOINT_PATH, args.net, recent_folder)
+        recent_weights_file = most_recent_weights(os.path.join(settings.CHECKPOINT_PATH, args.net, recent_folder))
+        if not recent_weights_file:
+            raise Exception('no recent weights file were found')
+        weights_path = os.path.join(settings.CHECKPOINT_PATH, args.net, recent_folder, recent_weights_file)
+        logging.info('loading weights file {} to resume training.....'.format(weights_path))
+        net.load_state_dict(torch.load(weights_path))
+
+        checkpoint_path = os.path.join(settings.CHECKPOINT_PATH, args.net, recent_folder)
 
     # else:
     #     checkpoint_path = os.path.join(settings.CHECKPOINT_PATH, args.net, settings.TIME_NOW)
@@ -223,26 +250,6 @@ if __name__ == '__main__':
     if not os.path.exists(checkpoint_path):
         os.makedirs(checkpoint_path)
     checkpoint_path = os.path.join(checkpoint_path, '{net}-{epoch}-{type}.pth')
-
-    best_acc = 0.0
-    # if args.resume:
-    best_weights = best_acc_weights(os.path.join(settings.CHECKPOINT_PATH, args.net, recent_folder))
-    if best_weights:
-        weights_path = os.path.join(settings.CHECKPOINT_PATH, args.net, recent_folder, best_weights)
-        logging.info('found best acc weights file:{}'.format(weights_path))
-        logging.info('load best training file to test acc...')
-        net.load_state_dict(torch.load(weights_path))
-        best_acc = eval_training(tb=False)
-        logging.info('best acc is {:0.2f}'.format(best_acc))
-
-    recent_weights_file = most_recent_weights(os.path.join(settings.CHECKPOINT_PATH, args.net, recent_folder))
-    if not recent_weights_file:
-        raise Exception('no recent weights file were found')
-    weights_path = os.path.join(settings.CHECKPOINT_PATH, args.net, recent_folder, recent_weights_file)
-    logging.info('loading weights file {} to resume training.....'.format(weights_path))
-    net.load_state_dict(torch.load(weights_path))
-
-    resume_epoch = last_epoch(os.path.join(settings.CHECKPOINT_PATH, args.net, recent_folder))
 
     for epoch in range(1, args.epoch + 1):
         if epoch > args.warm:
@@ -277,4 +284,5 @@ if __name__ == '__main__':
     # df = pd.DataFrame(all_log, columns=log_header)
     # os.makedirs(os.path.join("logs", args.net), exist_ok=True)
     # df.to_csv(os.path.join("logs", args.net, f"{settings.TIME_NOW}.csv"))
+
 
