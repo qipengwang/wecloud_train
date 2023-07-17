@@ -10,6 +10,8 @@ import os
 import sys
 import argparse
 import time
+t0 = time.time()
+accumulated_training_time = 0
 from datetime import datetime
 import logging
 
@@ -54,6 +56,7 @@ def wecloud_train(epoch):
     net.train()
     epoch_start_time = time.time()
     for batch_index, (images, labels) in enumerate(cifar100_training_loader):
+        t0 = time.time()
         batch_start_time = time.time()
 
         loss, outputs = train(images, labels)
@@ -92,6 +95,9 @@ def wecloud_train(epoch):
             optimizer.param_groups[0]['lr'],        # lr
             time.time() - epoch_start_time,         # current epoch wall-clock time
         ))
+        t1 = time.time()
+        accumulated_training_time += t1 - t0
+        print("[profiling] step time: {}s, accumuated training time: {}s".format(t1 - t0, accumulated_training_time))
         if args.profiling:
             logging.info(f"PROFILING: dataset total number {len(cifar100_training_loader.dataset)}, training one batch costs {time.time() - batch_start_time} seconds")
             return
@@ -251,6 +257,8 @@ if __name__ == '__main__':
         os.makedirs(checkpoint_path)
     checkpoint_path = os.path.join(checkpoint_path, '{net}-{epoch}-{type}.pth')
 
+    t1 = time.time()
+    print("[profiling] init time: {}s".format(t1-t0))
     for epoch in range(1, args.epoch + 1):
         if epoch > args.warm:
             train_scheduler.step(epoch)
