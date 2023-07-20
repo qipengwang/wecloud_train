@@ -1,5 +1,5 @@
 # train.py
-#!/usr/bin/env	python3
+#!/usr/bin/env  python3
 
 """ train network using pytorch
 
@@ -51,6 +51,7 @@ def train(inputs, targets):
 
 
 def wecloud_train(epoch):
+    global accumulated_training_time
 
     start = time.time()
     net.train()
@@ -204,13 +205,16 @@ if __name__ == '__main__':
     warmup_scheduler = WarmUpLR(optimizer, iter_per_epoch * args.warm)
 
     #prepare folder
-    cmd = 'mkdir -p ' + os.path.join(settings.CHECKPOINT_PATH, args.net)
+    cmd = 'mkdir -p ' + settings.CHECKPOINT_PATH
     #python 2.7 & 3
     ret = subprocess.check_output(cmd, shell=True)
 
     best_acc = 0.0
+    checkpoint_path = settings.CHECKPOINT_PATH
+    resume_epoch = 0
+    resume_epoch = last_epoch(os.path.join(settings.CHECKPOINT_PATH))
 
-    # if args.resume:
+    """# if args.resume:
     recent_folder = most_recent_folder(os.path.join(settings.CHECKPOINT_PATH, args.net), fmt=settings.DATE_FORMAT)
     if not recent_folder:
         #raise Exception('no recent folder were found')
@@ -237,7 +241,7 @@ if __name__ == '__main__':
         checkpoint_path = os.path.join(settings.CHECKPOINT_PATH, args.net, recent_folder)
 
     # else:
-    #     checkpoint_path = os.path.join(settings.CHECKPOINT_PATH, args.net, settings.TIME_NOW)
+    #     checkpoint_path = os.path.join(settings.CHECKPOINT_PATH, args.net, settings.TIME_NOW)"""
 
     #use tensorboard
     if not os.path.exists(settings.LOG_DIR):
@@ -250,15 +254,15 @@ if __name__ == '__main__':
     input_tensor = torch.Tensor(1, 3, 32, 32)
     if args.gpu:
         input_tensor = input_tensor.cuda()
-    writer.add_graph(net.module if torch.cuda.device_count() > 1 else net, input_tensor)
+    writer.add_graph(net.module if (torch.cuda.device_count() > 1 and args.gpu) else net, input_tensor)
 
     #create checkpoint folder to save model
     if not os.path.exists(checkpoint_path):
         os.makedirs(checkpoint_path)
-    checkpoint_path = os.path.join(checkpoint_path, '{net}-{epoch}-{type}.pth')
-
+    checkpoint_dir = os.path.join(checkpoint_path, '{epoch}')
     t1 = time.time()
     print("[profiling] init time: {}s".format(t1-t0))
+
     for epoch in range(1, args.epoch + 1):
         if epoch > args.warm:
             train_scheduler.step(epoch)
@@ -268,22 +272,24 @@ if __name__ == '__main__':
             continue
 
         wecloud_train(epoch)
+        os.mkdir(checkpoint_dir.format(epoch=epoch))
         
         if args.profiling:
             break
 
         acc = eval_training(epoch)
+        checkpoint_path = os.path.join(checkpoint_dir.format(epoch=epoch), 'checkpoint.pth')
 
         #start to save best performance model after learning rate decay to 0.01
         if best_acc < acc:
-            weights_path = checkpoint_path.format(net=args.net, epoch=epoch, type='best')
+            weights_path = checkpoint_path#.format(epoch=epoch)
             logging.info('saving weights file to {}'.format(weights_path))
             torch.save(net.state_dict(), weights_path)
             best_acc = acc
             continue
 
         if not epoch % settings.SAVE_EPOCH:
-            weights_path = checkpoint_path.format(net=args.net, epoch=epoch, type='regular')
+            weights_path = checkpoint_path#.format(epoch=epoch)
             logging.info('saving weights file to {}'.format(weights_path))
             torch.save(net.state_dict(), weights_path)
 
@@ -292,5 +298,4 @@ if __name__ == '__main__':
     # df = pd.DataFrame(all_log, columns=log_header)
     # os.makedirs(os.path.join("logs", args.net), exist_ok=True)
     # df.to_csv(os.path.join("logs", args.net, f"{settings.TIME_NOW}.csv"))
-
 
