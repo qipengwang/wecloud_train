@@ -22,7 +22,9 @@ import numpy as np
 import pandas as pd
 import subprocess
 import torch
+import torch.distributed as dist
 import torch.nn as nn
+from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
@@ -39,9 +41,6 @@ from utils import get_network, get_training_dataloader, get_test_dataloader, War
 logger = logging.Logger(__name__)
 
 def train(inputs, targets):
-    if args.gpu:
-        targets = targets.cuda()
-        inputs = inputs.cuda()
     optimizer.zero_grad()
     outputs = net(inputs)
     loss = loss_function(outputs, targets)
@@ -50,7 +49,7 @@ def train(inputs, targets):
     return loss, outputs
 
 
-def wecloud_train(epoch):
+def wecloud_train(epoch, local_rank):
     global accumulated_training_time
 
     start = time.time()
@@ -59,6 +58,9 @@ def wecloud_train(epoch):
     for batch_index, (images, labels) in enumerate(cifar100_training_loader):
         t0 = time.time()
         batch_start_time = time.time()
+        if args.gpu:
+            images = images.cuda(local_rank)
+            labels = labels.cuda(local_rank)
 
         loss, outputs = train(images, labels)
 
@@ -173,6 +175,14 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     net = get_network(args)
+    local_rank = int(os.environ["LOCAL_RANK"])
+    device = torch.device("cuda", local_rank)
+    torch.cuda.set_device(local_rank)
+    dist.init_process_group(backend="nccl")
+    if args.gpu:
+        net.cuda(local_rank)
+    #net = DDP(net, device_ids=[local_rank], output_device=local_rank)
+    net = DDP(net, device_ids=[local_rank])
 
     #data preprocessing:
     cifar100_training_loader = get_training_dataloader(
@@ -198,7 +208,7 @@ if __name__ == '__main__':
     csv_writer.write("epoch,iteration,trained_samples,total_samples,loss,lr,current epoch wall-clock time\n")
 
 
-    loss_function = nn.CrossEntropyLoss()
+    loss_function = nn.CrossEntropyLoss().cuda(local_rank)
     optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
     train_scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=settings.MILESTONES, gamma=0.2) #learning rate decay
     iter_per_epoch = len(cifar100_training_loader)
@@ -254,7 +264,8 @@ if __name__ == '__main__':
     input_tensor = torch.Tensor(1, 3, 32, 32)
     if args.gpu:
         input_tensor = input_tensor.cuda()
-    writer.add_graph(net.module if (torch.cuda.device_count() > 1 and args.gpu) else net, input_tensor)
+    if int(os.environ["RANK"]) == 0:
+        writer.add_graph(net.module if (torch.cuda.device_count() > 1 and args.gpu) else net, input_tensor)
 
     #create checkpoint folder to save model
     if not os.path.exists(checkpoint_path):
@@ -271,7 +282,7 @@ if __name__ == '__main__':
         if epoch <= resume_epoch:
             continue
 
-        wecloud_train(epoch)
+        wecloud_train(epoch, local_rank)
         if not os.path.exists(checkpoint_dir.format(epoch=epoch)):
             os.mkdir(checkpoint_dir.format(epoch=epoch))
         

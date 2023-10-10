@@ -157,10 +157,10 @@ def get_network(args):
         print('the network name you have entered is not supported yet')
         sys.exit()
 
-    if args.gpu: #use_gpu
-        if torch.cuda.device_count() > 1:
-            net = torch.nn.DataParallel(net)
-        net = net.cuda()
+    #if args.gpu: #use_gpu
+    #    if torch.cuda.device_count() > 1:
+    #        net = torch.nn.DataParallel(net)
+    #    net = net.cuda()
 
     return net
 
