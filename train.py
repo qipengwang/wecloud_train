@@ -14,6 +14,7 @@ t0 = time.time()
 accumulated_training_time = 0
 from datetime import datetime
 import logging
+import wandb
 
 logging.basicConfig(format='%(asctime)s - %(pathname)s[line:%(lineno)d] - %(levelname)s: %(message)s',
                     level=logging.INFO)
@@ -73,13 +74,6 @@ def wecloud_train(epoch, local_rank):
             if 'bias' in name:
                 writer.add_scalar('LastLayerGradients/grad_norm2_bias', para.grad.norm(), n_iter)
 
-        # logging.info('Training Epoch: {epoch} [{trained_samples}/{total_samples}]\tLoss: {:0.4f}\tLR: {:0.6f}'.format(
-        #     loss.item(),
-        #     optimizer.param_groups[0]['lr'],
-        #     epoch=epoch,
-        #     trained_samples=batch_index * args.b + len(images),
-        #     total_samples=len(cifar100_training_loader.dataset)
-        # ))
         csv_writer.write("{},{},{},{},{},{},{}".format(
             epoch,                                  # epoch
             n_iter,                                 # iteration
@@ -98,6 +92,15 @@ def wecloud_train(epoch, local_rank):
             optimizer.param_groups[0]['lr'],        # lr
             time.time() - epoch_start_time,         # current epoch wall-clock time
         ))
+        wandb.log({
+            "epoch": epoch,
+            "iteration": n_iter,
+            "trained_samples": batch_index * args.b + len(images),
+            "total_samples": len(cifar100_training_loader.dataset),
+            "loss": loss.item(),
+            "current_epoch_wall-clock_time": time.time() - epoch_start_time
+        })
+        
         t1 = time.time()
         accumulated_training_time += t1 - t0
         print("[profiling] step time: {}s, accumuated training time: {}s".format(t1 - t0, accumulated_training_time))
@@ -173,6 +176,21 @@ if __name__ == '__main__':
     parser.add_argument('--resume', action='store_true', default=False, help='resume training')
     parser.add_argument('--profiling', action="store_true", default=False, help="profile one batch")
     args = parser.parse_args()
+
+    wandb.login(
+        key="local-0b4dd77e45ad93ff68db22067d0d0f3ef9323636", 
+        host="http://115.27.161.208:8081/"
+    )
+    run = wandb.init(
+        project="wecloud_train",
+        entity="adminadmin",
+        config={
+            "learning_rate": args.lr,
+            "epochs": args.epoch,
+            "batch_size": args.b,
+            "network": args.net
+        }
+    )
 
     net = get_network(args)
     local_rank = int(os.environ["LOCAL_RANK"])
