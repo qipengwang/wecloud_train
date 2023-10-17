@@ -1,6 +1,4 @@
-#image: nvidia/cuda:12.1.0-runtime-ubuntu18.04
-#image: nvidia/cuda:12.1.0-devel-ubuntu18.04
-image: wangqipeng/wecloud_train:v0.2.0
+image: wangqipeng/wecloud_train:v0.3.0
 
 
 setup: |
