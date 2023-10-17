@@ -12,6 +12,7 @@ import argparse
 import time
 from datetime import datetime
 import logging
+import wandb
 
 logging.basicConfig(format='%(asctime)s - %(pathname)s[line:%(lineno)d] - %(levelname)s: %(message)s',
                     level=logging.INFO)
@@ -92,6 +93,14 @@ def wecloud_train(epoch):
             optimizer.param_groups[0]['lr'],        # lr
             time.time() - epoch_start_time,         # current epoch wall-clock time
         ))
+        wandb.log({
+            "epoch": epoch,
+            "iteration": n_iter,
+            "trained_samples": batch_index * args.b + len(images),
+            "total_samples": len(cifar100_training_loader.dataset),
+            "loss": loss.item(),
+            "current_epoch_wall-clock_time": time.time() - epoch_start_time
+        })
         if args.profiling:
             logging.info(f"PROFILING: dataset total number {len(cifar100_training_loader.dataset)}, training one batch costs {time.time() - batch_start_time} seconds")
             return
@@ -164,6 +173,23 @@ if __name__ == '__main__':
     parser.add_argument('--resume', action='store_true', default=False, help='resume training')
     parser.add_argument('--profiling', action="store_true", default=False, help="profile one batch")
     args = parser.parse_args()
+
+    # wandb.login(key="2ddf6ecd6887a6bbf543b74cca890f69aee9ac2d")
+    wandb.login(
+        key="local-0b4dd77e45ad93ff68db22067d0d0f3ef9323636", 
+        host="http://115.27.161.208:8081/"
+    )
+    run = wandb.init(
+        project="wecloud_train",
+        entity="adminadmin",
+        config={
+            "learning_rate": args.lr,
+            "epochs": args.epoch,
+            "batch_size": args.b,
+            "network": args.net
+        }
+    )
+    # wandb.init(project="my-test-project", entity="adminadmin")
 
     net = get_network(args)
 
