@@ -274,21 +274,22 @@ def most_recent_weights(weights_folder):
         if folder is empty return empty string
     """
     weight_files = os.listdir(weights_folder)
-    if len(weights_folder) == 0:
-        return ''
+    if len(weight_files) == 0:
+        return 0
 
-    regex_str = r'([A-Za-z0-9]+)-([0-9]+)-(regular|best)'
+    regex_str = r'(\d+)'
 
     # sort files by epoch
-    weight_files = sorted(weight_files, key=lambda w: int(re.search(regex_str, w).groups()[1]))
+    weight_files = sorted(weight_files, key=lambda w: int(re.search(regex_str, w).groups()[0]))
 
     return weight_files[-1]
 
 def last_epoch(weights_folder):
     weight_file = most_recent_weights(weights_folder)
     if not weight_file:
-       raise Exception('no recent weights were found')
-    resume_epoch = int(weight_file.split('-')[1])
+       return 0
+       #raise Exception('no recent weights were found')
+    resume_epoch = int(weight_file.split('-')[0])
 
     return resume_epoch
 
