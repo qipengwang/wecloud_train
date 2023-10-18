@@ -14,6 +14,7 @@ t0 = time.time()
 accumulated_training_time = 0
 from datetime import datetime
 import logging
+import wandb
 
 logging.basicConfig(format='%(asctime)s - %(pathname)s[line:%(lineno)d] - %(levelname)s: %(message)s',
                     level=logging.INFO)
