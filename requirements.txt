@@ -4,4 +4,3 @@ pandas
 tensorboard==2.11.0
 numpy==1.21.6
 chardet
-wandb
