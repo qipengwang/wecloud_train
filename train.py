@@ -88,15 +88,15 @@ def wecloud_train(epoch):
             optimizer.param_groups[0]['lr'],        # lr
             time.time() - epoch_start_time,         # current epoch wall-clock time
         ))
-        logging.info("epoch = {}, iteration = {}, trained_samples = {}, total_samples = {}, loss = {}, lr = {}, current_epoch_wall-clock_time = {}".format(
-            epoch,                                  # epoch
-            n_iter,                                 # iteration
-            batch_index * args.b + len(images),     # trained_samples
-            len(cifar100_training_loader.dataset),  # total_samples
-            loss.item(),                            # loss
-            optimizer.param_groups[0]['lr'],        # lr
-            time.time() - epoch_start_time,         # current epoch wall-clock time
-        ))
+        # logging.info("epoch = {}, iteration = {}, trained_samples = {}, total_samples = {}, loss = {}, lr = {}, current_epoch_wall-clock_time = {}".format(
+        #     epoch,                                  # epoch
+        #     n_iter,                                 # iteration
+        #     batch_index * args.b + len(images),     # trained_samples
+        #     len(cifar100_training_loader.dataset),  # total_samples
+        #     loss.item(),                            # loss
+        #     optimizer.param_groups[0]['lr'],        # lr
+        #     time.time() - epoch_start_time,         # current epoch wall-clock time
+        # ))
         wandb.log({
             "epoch": epoch,
             "iteration": n_iter,
@@ -105,9 +105,9 @@ def wecloud_train(epoch):
             "loss": loss.item(),
             "current_epoch_wall-clock_time": time.time() - epoch_start_time
         })
-        if args.profiling:
-            logging.info(f"PROFILING: dataset total number {len(cifar100_training_loader.dataset)}, training one batch costs {time.time() - batch_start_time} seconds")
-            return
+        # if args.profiling:
+        #     logging.info(f"PROFILING: dataset total number {len(cifar100_training_loader.dataset)}, training one batch costs {time.time() - batch_start_time} seconds")
+        #     return
 
         #update training loss for each iteration
         writer.add_scalar('Train/loss', loss.item(), n_iter)
@@ -122,7 +122,7 @@ def wecloud_train(epoch):
 
     finish = time.time()
 
-    logging.info('epoch {} training time consumed: {:.2f}s'.format(epoch, finish - start))
+    # logging.info('epoch {} training time consumed: {:.2f}s'.format(epoch, finish - start))
 
 @torch.no_grad()
 def eval_training(epoch=0, tb=True):
