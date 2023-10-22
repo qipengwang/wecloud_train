@@ -304,7 +304,7 @@ if __name__ == '__main__':
         wecloud_train(epoch, local_rank)
         if not os.path.exists(checkpoint_dir.format(epoch=epoch)):
             #os.mkdir(checkpoint_dir.format(epoch=epoch))
-            cmd = 'mkdir -p ' + settings.LOG_DIR
+            cmd = 'mkdir -p ' + checkpoint_dir.format(epoch=epoch)
             ret = subprocess.check_output(cmd, shell=True)
         
         if args.profiling:
