@@ -17,5 +17,5 @@ run: |
   googlenet
   --gpu
 
-profile: |
-  python -u train.py --net googlenet --gpu --profiling
+# profile: |
+#   python -u train.py --net googlenet --gpu --profiling
